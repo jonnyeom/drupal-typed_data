@@ -132,7 +132,13 @@ class DataFetcher implements DataFetcherInterface {
 
       // Drill down to the next step in the data selector.
       if ($data_definition instanceof ComplexDataDefinitionInterface) {
-        $data_definition = $data_definition->getPropertyDefinition($name);
+        // If this is a entity_reference field, get its field properties.
+        $property_definitions = $data_definition->getPropertyDefinitions();
+        if (\substr($data_definition->getDataType(), -\strlen('entity_reference')) === 'entity_reference') {
+          $settings = $data_definition->getSettings();
+          $property_definitions += \Drupal::service('entity_field.manager')->getFieldDefinitions($settings['target_type'], reset($settings['handler_settings']['target_bundles']));
+        }
+        $data_definition = $property_definitions[$name];
       }
       elseif ($data_definition instanceof ListDataDefinitionInterface) {
         $data_definition = $data_definition->getItemDefinition();
@@ -236,7 +242,13 @@ class DataFetcher implements DataFetcherInterface {
     }
 
     if ($variable_definition instanceof ComplexDataDefinitionInterface) {
-      foreach ($variable_definition->getPropertyDefinitions() as $property_name => $property_definition) {
+      // If this is a entity_reference field, get its field properties.
+      $field_properties = $variable_definition->getPropertyDefinitions();
+      if (\substr($variable_definition->getDataType(), -\strlen('entity_reference')) === 'entity_reference') {
+        $settings = $variable_definition->getSettings();
+        $field_properties += \Drupal::service('entity_field.manager')->getFieldDefinitions($settings['target_type'], reset($settings['handler_settings']['target_bundles']));
+      }
+      foreach ($field_properties as $property_name => $property_definition) {
         // If the property starts with the part then we have a suggestion. If
         // the part after the dot is the empty string we include all properties.
         if (stripos($property_name, $last_part) === 0 || $last_part === '') {
